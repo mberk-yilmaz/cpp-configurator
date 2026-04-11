@@ -1,0 +1,42 @@
+{
+  "name": "cpp-configurator",
+  "displayName": "C++ Configurator",
+  "description": "Automatically initialize a generic C++ workspace for VS Code",
+  "version": "1.0.0",
+  "publisher": "mby",
+  "author": "mby",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mberk-yilmaz/cpp-configurator.git"
+  },
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "cpp-configurator.initialize",
+        "title": "C++ Configurator: Initialize Workspace"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.80.0",
+    "@types/node": "18.x",
+    "typescript": "^5.1.3"
+  }
+}
