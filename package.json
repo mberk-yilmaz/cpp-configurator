@@ -3,7 +3,7 @@
   "displayName": "C++ Configurator",
   "description": "Automatically initialize a generic C++ workspace for VS Code",
   "version": "1.0.0",
-  "publisher": "mby",
+  "publisher": "mberk",
   "author": "mby",
   "license": "Apache-2.0",
   "repository": {
