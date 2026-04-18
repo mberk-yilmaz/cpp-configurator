@@ -41,7 +41,11 @@ import {
     getWarningsCmake,
     getSanitizersCmake,
     getFetchTestsCmake,
-    getCMakePresetsJson
+    getCMakePresetsJson,
+    getOptionsCmake,
+    getCompilerOptionsCmake,
+    getSrcCMakeLists,
+    getExtensionsJson
 } from './templates';
 
 export function activate(context: vscode.ExtensionContext) {
@@ -227,7 +231,8 @@ export function activate(context: vscode.ExtensionContext) {
             fs.writeFileSync(path.join(vscodeDir, 'c_cpp_properties.json'), getCppProperties(cppStandard, selectedCompiler.path));
             fs.writeFileSync(path.join(vscodeDir, 'settings.json'), getSettingsJson(cppStandard, selectedCompiler.path));
             fs.writeFileSync(path.join(vscodeDir, 'tasks.json'), getTasksJson());
-            fs.writeFileSync(path.join(vscodeDir, 'launch.json'), getLaunchJson(projectName));
+            fs.writeFileSync(path.join(vscodeDir, 'launch.json'), getLaunchJson(projectName, testChoice));
+            fs.writeFileSync(path.join(vscodeDir, 'extensions.json'), getExtensionsJson());
             
             fs.writeFileSync(path.join(workspacePath, 'CMakeLists.txt'), getCMakeLists(projectName, cppStandard, pkgManagerChoice, testChoice));
             fs.writeFileSync(path.join(workspacePath, '.gitignore'), getGitIgnore());
@@ -235,7 +240,7 @@ export function activate(context: vscode.ExtensionContext) {
             fs.writeFileSync(path.join(workspacePath, '.editorconfig'), getEditorConfig());
 
             // Write main.cpp
-            const mainPath = path.join(workspacePath, 'main.cpp');
+            const mainPath = path.join(srcDir, 'main.cpp');
             if (!fs.existsSync(mainPath)) {
                 fs.writeFileSync(mainPath, `#include <iostream>
 
@@ -245,6 +250,9 @@ int main() {
 }
 `);
             }
+
+            // Write src/CMakeLists.txt
+            fs.writeFileSync(path.join(srcDir, 'CMakeLists.txt'), getSrcCMakeLists(projectName));
 
             // Write Package Manager Files
             if (pkgManagerChoice === 'vcpkg') {
@@ -260,6 +268,8 @@ int main() {
             }
             fs.writeFileSync(path.join(cmakeDir, 'Warnings.cmake'), getWarningsCmake());
             fs.writeFileSync(path.join(cmakeDir, 'Sanitizers.cmake'), getSanitizersCmake());
+            fs.writeFileSync(path.join(cmakeDir, 'Options.cmake'), getOptionsCmake());
+            fs.writeFileSync(path.join(cmakeDir, 'CompilerOptions.cmake'), getCompilerOptionsCmake());
 
             // Write Testing Framework Files & Module
             if (testChoice !== 'None') {

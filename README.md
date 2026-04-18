@@ -13,6 +13,7 @@ A Visual Studio Code extension that automatically generates a comprehensive, pro
 - **IntelliSense Configuration:** Properly configures VS Code's `settings.json`, `c_cpp_properties.json` and `.clangd` to fully understand your workspace, including dynamically injected `compile_commands.json` support so dependencies are seamlessly resolved.
 - **Code Quality Tools:** Bundles pre-configured `.clang-format` and `.clang-tidy` files tailored for modern C++ development, along with Python scripts to easily execute them across the entire workspace.
 - **Test Framework Integration:** Supports automatically setting up GoogleTest (GTest) or Catch2 via CMake's FetchContent mechanism.
+- **Premium Debugging:** Multi-profile `launch.json` setup for GDB and CodeLLDB, including dedicated test debugging setups out of the box.
 - **Package Manager Configuration:** Provisions initial configuration for `vcpkg` (`vcpkg.json`) or `Conan` (`conanfile.txt`) based on user selection.
 - **Continuous Integration:** Generates a GitHub Actions workflow for cross-platform builds out of the box.
 
@@ -48,15 +49,20 @@ The extension generates the following standardized layout:
 │       └── build.yml
 ├── .vscode/
 │   ├── c_cpp_properties.json
+│   ├── extensions.json
 │   ├── launch.json
 │   ├── settings.json
 │   └── tasks.json
 ├── cmake/
+│   ├── CompilerOptions.cmake
 │   ├── FetchTests.cmake
+│   ├── Options.cmake
 │   ├── Sanitizers.cmake
 │   └── Warnings.cmake
 ├── include/
 ├── src/
+│   ├── CMakeLists.txt
+│   └── main.cpp
 ├── tests/
 ├── tools/
 │   ├── run-clang-format.py
@@ -69,6 +75,5 @@ The extension generates the following standardized layout:
 ├── .gitignore
 ├── CMakeLists.txt
 ├── CMakePresets.json
-├── Doxyfile
-└── main.cpp
+└── Doxyfile
 ```

@@ -198,20 +198,20 @@ export const getTasksJson = () => `{
     ]
 }`;
 
-export const getLaunchJson = (projectName: string) => `{
-    "version": "0.2.0",
-    "configurations": [
+export const getLaunchJson = (projectName: string, testFramework: string) => {
+    let configs = `[
         {
             "name": "(gdb) Launch",
             "type": "cppdbg",
             "request": "launch",
-            "program": "\${workspaceFolder}/build/${projectName}",
+            "program": "\${workspaceFolder}/build/bin/${projectName}",
             "args": [],
             "stopAtEntry": false,
             "cwd": "\${workspaceFolder}",
             "environment": [],
             "externalConsole": false,
             "MIMode": "gdb",
+            "preLaunchTask": "Build: CMake Build",
             "setupCommands": [
                 {
                     "description": "Enable pretty-printing for gdb",
@@ -219,7 +219,63 @@ export const getLaunchJson = (projectName: string) => `{
                     "ignoreFailures": true
                 }
             ]
-        }
+        },
+        {
+            "name": "(lldb) Launch",
+            "type": "lldb",
+            "request": "launch",
+            "program": "\${workspaceFolder}/build/bin/${projectName}",
+            "args": [],
+            "cwd": "\${workspaceFolder}",
+            "preLaunchTask": "Build: CMake Build"
+        }`;
+
+    if (testFramework !== 'None') {
+        configs += `,
+        {
+            "name": "(gdb) Launch Tests",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "\${workspaceFolder}/build/bin/${projectName}_tests",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "\${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "preLaunchTask": "Build: CMake Build",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+        {
+            "name": "(lldb) Launch Tests",
+            "type": "lldb",
+            "request": "launch",
+            "program": "\${workspaceFolder}/build/bin/${projectName}_tests",
+            "args": [],
+            "cwd": "\${workspaceFolder}",
+            "preLaunchTask": "Build: CMake Build"
+        }`;
+    }
+
+    configs += `\n    ]`;
+
+    return `{
+    "version": "0.2.0",
+    "configurations": ${configs}
+}`;
+}
+
+export const getExtensionsJson = () => `{
+    "recommendations": [
+        "vadimcn.vscode-lldb",
+        "ms-vscode.cpptools",
+        "ms-vscode.cmake-tools"
     ]
 }`;
 
@@ -234,19 +290,24 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# Modular Configs
-include(cmake/Warnings.cmake)
-include(cmake/Sanitizers.cmake)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "\${CMAKE_BINARY_DIR}/bin")
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "\${CMAKE_BINARY_DIR}/lib")
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "\${CMAKE_BINARY_DIR}/lib")
+
+list(APPEND CMAKE_MODULE_PATH "\${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+
+include(Options)
+include(CompilerOptions)
+include(Warnings)
+include(Sanitizers)
 
 include_directories(include)
 
-file(GLOB_RECURSE SRC_FILES src/*.cpp)
-
-add_executable(${projectName} main.cpp \${SRC_FILES})
+add_subdirectory(src)
 `;
 
     if (testFramework !== 'None') {
-        cmake += `\ninclude(cmake/FetchTests.cmake)\n`;
+        cmake += `\nif(ENABLE_TESTING)\n    include(FetchTests)\nendif()\n`;
     }
 
     return cmake;
@@ -358,7 +419,7 @@ export const getClangd = (standard: string) => `CompileFlags:
 Diagnostics:
   ClangTidy:
     Add: [modernize-*, readability-*, bugprone-*, performance-*, cppcoreguidelines-*]
-  SystemHeaders: false
+  BuiltinHeaders: false
 `;
 
 export const getRunClangFormatPy = () => `#!/usr/bin/env python3
@@ -700,4 +761,56 @@ export const getCMakePresetsJson = (cxxCmd: string, cCmd: string) => `{
     }
   ]
 }
+`;
+
+export const getOptionsCmake = () => `# --- Build Type Default ---
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+    message(STATUS "No build type selected, default to Debug")
+    set(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Choose the type of build." FORCE)
+    set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
+endif()
+
+# --- Global Options ---
+option(ENABLE_TESTING "Enable tests" ON)
+option(ENABLE_LTO "Enable Interprocedural Optimization (LTO)" OFF)
+
+# --- CCache Integration ---
+find_program(CCACHE_PROGRAM ccache)
+if(CCACHE_PROGRAM)
+    message(STATUS "Found ccache: \${CCACHE_PROGRAM}")
+    set(CMAKE_C_COMPILER_LAUNCHER \${CCACHE_PROGRAM})
+    set(CMAKE_CXX_COMPILER_LAUNCHER \${CCACHE_PROGRAM})
+else()
+    message(STATUS "ccache not found. Install it for faster rebuilds: 'apt install ccache' (Ubuntu/Debian), 'brew install ccache' (macOS), or 'choco install ccache' (Windows).")
+endif()
+
+# --- LTO Integration ---
+if(ENABLE_LTO)
+    include(CheckIPOSupported)
+    check_ipo_supported(RESULT lto_supported OUTPUT error_msg)
+    if(lto_supported)
+        message(STATUS "IPO / LTO enabled")
+        set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+    else()
+        message(WARNING "IPO / LTO is not supported by this compiler: \${error_msg}")
+    endif()
+endif()
+`;
+
+export const getCompilerOptionsCmake = () => `if(MSVC)
+    add_compile_options(
+        $<$<CONFIG:Release>:/O2> $<$<CONFIG:Release>:/Ob2> $<$<CONFIG:Release>:/DNDEBUG>
+        $<$<CONFIG:Debug>:/Zi> $<$<CONFIG:Debug>:/Ob0> $<$<CONFIG:Debug>:/Od> $<$<CONFIG:Debug>:/RTC1>
+    )
+elseif(CMAKE_CXX_COMPILER_ID MATCHES ".*Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    add_compile_options(
+        $<$<CONFIG:Release>:-O3> $<$<CONFIG:Release>:-DNDEBUG>
+        $<$<CONFIG:Debug>:-O0> $<$<CONFIG:Debug>:-g>
+    )
+endif()
+`;
+
+export const getSrcCMakeLists = (projectName: string) => `file(GLOB_RECURSE SRC_FILES *.cpp)
+
+add_executable(\${PROJECT_NAME} \${SRC_FILES})
 `;
